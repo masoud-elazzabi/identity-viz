@@ -5,8 +5,8 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 let width, height, centerX, centerY;
-const PARTICLE_COUNT = 3500;
-const BASE_RADIUS = 320;
+const PARTICLE_COUNT = 5500;
+const BASE_RADIUS = 650;
 
 const particles = [];
 let time = 0;
@@ -41,17 +41,17 @@ function initParticles() {
 
         // Decide particle type
         let type, size, colorMix;
-        if (layer < 0.05) {
+        if (layer < 0.04) {
             type = 'core';       // bright core particles
-            size = 1.5 + Math.random() * 2;
+            size = 2 + Math.random() * 2.5;
             colorMix = 0.8 + Math.random() * 0.2;
-        } else if (layer < 0.3) {
+        } else if (layer < 0.25) {
             type = 'inner';      // warm amber particles
-            size = 0.8 + Math.random() * 1.5;
+            size = 1 + Math.random() * 1.8;
             colorMix = 0.4 + Math.random() * 0.4;
         } else {
             type = 'surface';    // blue surface particles
-            size = 0.4 + Math.random() * 1.2;
+            size = 0.5 + Math.random() * 1.4;
             colorMix = Math.random() * 0.3;
         }
 
@@ -141,7 +141,7 @@ function update() {
         const z2 = y * sinRX + z1 * cosRX;
 
         // Simple perspective projection
-        const perspective = 900;
+        const perspective = 1600;
         const scale = perspective / (perspective + z2 + BASE_RADIUS * 2);
 
         p.screenX = centerX + x1 * scale;
@@ -199,23 +199,30 @@ function draw() {
         }
     }
 
-    // Subtle connection lines between nearby core particles
+    // Subtle connection lines — only between nearby core particles, kept sparse
     const coreParticles = particles.filter(p => p.type === 'core');
-    ctx.lineWidth = 0.3;
+    ctx.lineWidth = 0.2;
     for (let i = 0; i < coreParticles.length; i++) {
+        let connections = 0;
         for (let j = i + 1; j < coreParticles.length; j++) {
+            if (connections >= 3) break; // max 3 connections per particle
+
             const a = coreParticles[i], b = coreParticles[j];
             const dx = a.screenX - b.screenX;
             const dy = a.screenY - b.screenY;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 100) {
-                const lineAlpha = (1 - dist / 100) * 0.15;
+            if (dist < 80) {
+                // Only draw if both particles are clearly in front (avoids lines at the limb)
+                if (a.depth < BASE_RADIUS * 0.1 || b.depth < BASE_RADIUS * 0.1) continue;
+
+                const lineAlpha = (1 - dist / 80) * 0.08;
                 ctx.beginPath();
                 ctx.moveTo(a.screenX, a.screenY);
                 ctx.lineTo(b.screenX, b.screenY);
-                ctx.strokeStyle = `rgba(120, 180, 255, ${lineAlpha})`;
+                ctx.strokeStyle = `rgba(140, 190, 255, ${lineAlpha})`;
                 ctx.stroke();
+                connections++;
             }
         }
     }
