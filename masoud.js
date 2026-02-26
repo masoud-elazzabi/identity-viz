@@ -199,28 +199,51 @@ function draw() {
         }
     }
 
-    // Subtle connection lines — only between nearby core particles, kept sparse
-    const coreParticles = particles.filter(p => p.type === 'core');
-    ctx.lineWidth = 0.2;
-    for (let i = 0; i < coreParticles.length; i++) {
+    // Connection network — the relationships between memories, not just the memories themselves
+    // Core and inner particles both participate, creating layered structure
+    const connectable = particles.filter(p => p.type === 'core' || p.type === 'inner');
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < connectable.length; i++) {
         let connections = 0;
-        for (let j = i + 1; j < coreParticles.length; j++) {
-            if (connections >= 3) break; // max 3 connections per particle
+        const a = connectable[i];
 
-            const a = coreParticles[i], b = coreParticles[j];
+        // Skip particles on the back face
+        if (a.depth < -BASE_RADIUS * 0.15) continue;
+
+        const maxConn = a.type === 'core' ? 5 : 2;
+        const maxDist = a.type === 'core' ? 120 : 70;
+
+        for (let j = i + 1; j < connectable.length; j++) {
+            if (connections >= maxConn) break;
+
+            const b = connectable[j];
+            if (b.depth < -BASE_RADIUS * 0.15) continue;
+
             const dx = a.screenX - b.screenX;
             const dy = a.screenY - b.screenY;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 80) {
-                // Only draw if both particles are clearly in front (avoids lines at the limb)
-                if (a.depth < BASE_RADIUS * 0.1 || b.depth < BASE_RADIUS * 0.1) continue;
+            if (dist < maxDist) {
+                // Depth-aware alpha — connections fade toward the edges
+                const depthFade = Math.min(
+                    (a.depth + BASE_RADIUS) / (BASE_RADIUS * 1.5),
+                    (b.depth + BASE_RADIUS) / (BASE_RADIUS * 1.5)
+                );
+                const fade = Math.max(0, Math.min(1, depthFade));
 
-                const lineAlpha = (1 - dist / 80) * 0.08;
+                const lineAlpha = (1 - dist / maxDist) * 0.45 * fade;
+                if (lineAlpha < 0.01) continue;
+
+                // Color: core-to-core gets a warm golden tint, others cool blue-white
+                const warm = (a.type === 'core' && b.type === 'core');
+                const r = warm ? 230 : 140;
+                const g = warm ? 190 : 180;
+                const bCol = warm ? 80 : 255;
+
                 ctx.beginPath();
                 ctx.moveTo(a.screenX, a.screenY);
                 ctx.lineTo(b.screenX, b.screenY);
-                ctx.strokeStyle = `rgba(140, 190, 255, ${lineAlpha})`;
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${bCol}, ${lineAlpha})`;
                 ctx.stroke();
                 connections++;
             }
