@@ -257,6 +257,12 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
+// Fallback for environments that throttle requestAnimationFrame (e.g. screensavers)
+setInterval(() => {
+    update();
+    draw();
+}, 33); // ~30fps fallback
+
 window.addEventListener('resize', resize);
 resize();
 initParticles();
